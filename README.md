@@ -16,5 +16,9 @@ pip install google-cloud-service
 pip install azure-core
 pip install pymongo
 pip install dnspython
+pip install pvporcupine
+sudo apt-get install -y swig libpulse-dev
+pip install pocketsphinx
+
 set GOOGLE_APPLICATION_CREDENTIALS=C:\Users\yashj\Documents\gitrepo\GreetingBotRPI\ApiKey\speechToTextGoogleApiKey.json
 ```
