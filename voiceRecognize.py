@@ -1,5 +1,4 @@
 
-
 import re
 import pyttsx3
 import speech_recognition as sr
@@ -126,7 +125,7 @@ class MicrophoneStream(object):
 
 def speakText(text):
     # for windows
-    engine = pyttsx3.init("sapi5")
+    engine = pyttsx3.init("espeak")
     engine.setProperty("rate", 175)
     engine.say(text)
     engine.runAndWait()
@@ -317,8 +316,8 @@ def listenHotword():
         channels=1,
         format=pyaudio.paInt16,
         input=True,
-        frames_per_buffer=porcupine.frame_length)
-
+        frames_per_buffer=porcupine.frame_length,
+	input_device_index=1)
     while True:
         pcm = audio_stream.read(porcupine.frame_length)
         pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
@@ -349,5 +348,6 @@ def listenHotword():
 wakeHotword = threading.Thread(target=listenHotword)
 # wakeMotion=threading.Thread(target=detectMotion)
 print("prgogram initiated..............")
+speakText("hello")
 wakeHotword.start()
 # wakeMotion.start()
