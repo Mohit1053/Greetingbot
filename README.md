@@ -6,7 +6,8 @@ human communication part of greeting bot
   source greetingBotRpi/Scripts/Bin/activate
   ```
 ## Commands to run before starting this program
-``` pip install pyttsx3
+``` 
+pip install pyttsx3
 pip install speechrecognition
 pip install pyaudio
 pip install azure-cognitiveservices-knowledge-qnamaker==0.2.0
