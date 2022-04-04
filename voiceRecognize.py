@@ -6,7 +6,10 @@ import pyaudio
 from pocketsphinx import *
 import pvporcupine
 import threading
+import RPi.GPIO as GPIO
 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(4,GPIO.OUT)
 """IMPORTS FOR GOOGLE API"""
 from six.moves import queue
 
@@ -35,10 +38,16 @@ deployment = "production"
 from pymongo import MongoClient
 import pymongo
 pa=pyaudio.PyAudio()
+
 client = MongoClient(
-    "mongodb+srv://yash20551:timetravel202@cluster0.dcma0.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-queryList = client['UnknownQueries']
+   "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
+queryList = client['QueryLog']
 queriesCollection = queryList["queries"]
+# query = {
+#            "Question": "start Test",
+#            "Answer": "working"
+#        }
+# queriesCollection.insert_one(query)
 # -----------------------------------------------------------------------------------------------------------------
 
 # from gpiozero import MotionSensor
@@ -122,19 +131,58 @@ class MicrophoneStream(object):
             yield b"".join(data)
 
 
+"""================================================================================================================"""
+"""   USING GOOGLE TEXT TO SPEECH CONVERSION"""
+from google.cloud import texttospeech
+
+# Instantiates a client
+client = texttospeech.TextToSpeechClient()
+
+def speakGoogleText(text):
+    # Set the text input to be synthesized
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+
+    # Build the voice request, select the language code ("en-US") and the ssml
+    # voice gender ("neutral")
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="en-IN", ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+    )
+
+    # Select the type of audio file you want returned
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+
+    # Perform the text-to-speech request on the text input with the selected
+    # voice parameters and audio file type
+    response = client.synthesize_speech(
+        input=synthesis_input, voice=voice, audio_config=audio_config
+    )
+
+    # The response's audio_content is binary.
+    with open("output.mp3", "wb") as out:
+        # Write the response to the output file.
+        out.write(response.audio_content)
+        print('Audio content written to file "output.mp3"')
+    os.system("mpg123 output.mp3")
+
+
+
+
+"""====================================================================================================================="""
 
 def speakText(text):
-    # for windows
-    engine = pyttsx3.init("espeak")
-    engine.setProperty("rate", 175)
-    engine.say(text)
-    engine.runAndWait()
-    print(text)
+    # # for windows
+    # engine = pyttsx3.init("espeak")
+    # engine.setProperty("rate", 175)
+    # engine.say(text)
+    # engine.runAndWait()
+    # print(text)
 
-    # for rpi
-    # cmd='pico2wave -l en-US -w hello.wav "'+ text+'"'
-    # os.system(cmd)
-    # os.system("aplay hello.wav")
+    #for rpi
+    cmd='pico2wave -l en-US -w hello.wav "'+ text+'"'
+    os.system(cmd)
+    os.system("aplay hello.wav")
 
 
 def generateResponse(userQuestion):
@@ -153,13 +201,14 @@ def generateResponse(userQuestion):
     print("Confidence Score: {}".format(output.answers[0].confidence))
 
     if (output.answers[0].confidence < 0.37):
-        query = {
-            "Question": question,
-            "Answer": output.answers[0].answer
-        }
-        queriesCollection.insert_one(query)
+       query = {
+           "Question": question,
+           "Answer": output.answers[0].answer
+       }
+       queriesCollection.insert_one(query)
+       speakGoogleText(notUnderstood)
     else:
-        speakText(output.answers[0].answer)
+        speakGoogleText(output.answers[0].answer)
 
 
 # def askingCapacity(textArray):
@@ -316,16 +365,16 @@ def listenHotword():
         channels=1,
         format=pyaudio.paInt16,
         input=True,
-        frames_per_buffer=porcupine.frame_length,
-	input_device_index=1)
+        frames_per_buffer=porcupine.frame_length)
     while True:
         pcm = audio_stream.read(porcupine.frame_length)
         pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
         keyword_index = porcupine.process(pcm)
         if keyword_index >= 0:
             print("Hotword Detected")
-            speakText("Thank You for your interest in ECE Labs.")
+            GPIO.output(4,GPIO.HIGH)
             takeCommand()
+            GPIO.output(4,GPIO.LOW)
 
 
 # def detectMotion():
@@ -348,6 +397,5 @@ def listenHotword():
 wakeHotword = threading.Thread(target=listenHotword)
 # wakeMotion=threading.Thread(target=detectMotion)
 print("prgogram initiated..............")
-speakText("hello")
 wakeHotword.start()
 # wakeMotion.start()
