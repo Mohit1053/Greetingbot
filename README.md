@@ -20,6 +20,10 @@ pip install dnspython
 pip install pvporcupine
 sudo apt-get install -y swig libpulse-dev
 pip install pocketsphinx
+sudo apt-get install mpg123
+sudo apt-get install libportaudio0 libportaudio2 libportaudiocpp0 portaudio19-dev
+pip install --upgrade google-cloud-texttospeech
+pip install --upgrade google-cloud-speech
 
 set GOOGLE_APPLICATION_CREDENTIALS=C:\Users\yashj\Documents\gitrepo\GreetingBotRPI\ApiKey\speechToTextGoogleApiKey.json
 ```
