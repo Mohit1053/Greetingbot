@@ -25,5 +25,8 @@ sudo apt-get install libportaudio0 libportaudio2 libportaudiocpp0 portaudio19-de
 pip install --upgrade google-cloud-texttospeech
 pip install --upgrade google-cloud-speech
 
+## NOTE google-cloud-speech installs grpcio 1.46.1 version but 1.45.0
+Manually install grpcio == 1..45.0
+
 set GOOGLE_APPLICATION_CREDENTIALS=C:\Users\yashj\Documents\gitrepo\GreetingBotRPI\ApiKey\speechToTextGoogleApiKey.json
 ```
