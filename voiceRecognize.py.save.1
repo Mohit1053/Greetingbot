@@ -40,6 +40,8 @@ deployment = "production"
 # mongo db initialization
 from pymongo import MongoClient
 import pymongo
+pa=pyaudio.PyAudio()
+
 client = MongoClient(
    "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
 queryList = client['QueryLog']
@@ -138,10 +140,9 @@ class MicrophoneStream(object):
 from google.cloud import texttospeech
 
 # Instantiates a client
-
+client = texttospeech.TextToSpeechClient()
 
 def speakGoogleText(text):
-    client = texttospeech.TextToSpeechClient()
     # Set the text input to be synthesized
     synthesis_input = texttospeech.SynthesisInput(text=text)
 
@@ -153,7 +154,7 @@ def speakGoogleText(text):
 
     # Select the type of audio file you want returned
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.LINEAR16
+        audio_encoding=texttospeech.AudioEncoding.MP3
     )
 
     # Perform the text-to-speech request on the text input with the selected
@@ -163,12 +164,12 @@ def speakGoogleText(text):
     )
 
     # The response's audio_content is binary.
-    with open("output.wav", "wb") as out:
+    with open("output.mp3", "wb") as out:
         # Write the response to the output file.
         out.write(response.audio_content)
-        print('Audio content written to file "output.wav"')
-    os.system("aplay output.wav")
-    os.system('rm output.wav')`
+        print('Audio content written to file "output.mp3"')
+    os.system("mpg123 output.mp3")
+
 
 
 
@@ -281,9 +282,9 @@ def takeCommand():
 
         # Now, put the transcription responses to use.
         generateResponse(return_transcribed_word(responses))
+	
 
 def listenHotword():
-    pa=pyaudio.PyAudio()
     r = sr.Recognizer()
     audio_stream = pa.open(
         rate=porcupine.sample_rate,
@@ -297,10 +298,27 @@ def listenHotword():
         keyword_index = porcupine.process(pcm)
         if keyword_index >= 0:
             print("Hotword Detected")
-            audio_stream.close()
-            pa.terminate()
             return True
             
+
+
+# def detectMotion():
+#     r=sr.Recognizer()
+#     audio_stream = pa.open(
+#                 rate=porcupine.sample_rate,
+#                 channels=1,
+#                 format=pyaudio.paInt16,
+#                 input=True,
+#                 frames_per_buffer=porcupine.frame_length)
+#     while True:
+#         pir.wait_for_motion()
+#         print("Movement detected")
+#         speakText("Hello, I am ready to listen")
+#         takeCommand(r,audio_stream)
+#         pir.wait_for_no_motion()
+#         print("motion reset")
+
+
 
 # wakeMotion=threading.Thread(target=detectMotion)
 print("program initiated..............")
