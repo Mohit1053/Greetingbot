@@ -1,4 +1,9 @@
+from flask import Flask, render_template
+from flask_socketio import SocketIO
+#importing translator library
+from googletrans import Translator
 
+translator = Translator()  #initiliazing translator
 from ast import keyword
 from multiprocessing.connection import wait
 import re
@@ -140,7 +145,11 @@ from google.cloud import texttospeech
 # Instantiates a client
 
 
-def speakGoogleText(text):
+def speakGoogleText(text, speakHindi):
+    #  recognize the text language and program accordingly.
+    if speakHindi:
+        text_to_translate = translator.translate(text,src= 'en',dest= 'hi')
+        text = text_to_translate.text
     client = texttospeech.TextToSpeechClient()
     # Set the text input to be synthesized
     synthesis_input = texttospeech.SynthesisInput(text=text)
@@ -148,7 +157,7 @@ def speakGoogleText(text):
     # Build the voice request, select the language code ("en-US") and the ssml
     # voice gender ("neutral")
     voice = texttospeech.VoiceSelectionParams(
-        language_code="en-IN", ssml_gender=texttospeech.SsmlVoiceGender.MALE
+        language_code="hi-IN", ssml_gender=texttospeech.SsmlVoiceGender.MALE
     )
 
     # Select the type of audio file you want returned
@@ -168,7 +177,7 @@ def speakGoogleText(text):
         out.write(response.audio_content)
         print('Audio content written to file "output.wav"')
     os.system("aplay output.wav")
-    os.system('rm output.wav')`
+    os.system('rm output.wav')
 
 
 
@@ -189,6 +198,14 @@ def speakText(text):
 
 
 def generateResponse(userQuestion):
+    #if in hindi, convert to english and then send to azure
+    #use translator.detect
+    lang  = translator.detect(userQuestion)
+    speakHindi = False
+    if(lang.lang == 'hi'):
+        speakHindi = True
+        englishText = translator.translate(userQuestion, source = 'hi', dest = 'en')
+        userQuestion = englishText.text
     """Generates response from the given user question and outputs the speech converted"""
     client = QuestionAnsweringClient(endpoint, credential)
     with client:
@@ -209,14 +226,15 @@ def generateResponse(userQuestion):
            "Answer": output.answers[0].answer
        }
        queriesCollection.insert_one(query)
-       speakGoogleText(notUnderstood)
+       speakGoogleText(notUnderstood, speakHindi)
     else:
-        speakGoogleText(output.answers[0].answer)
+       speakGoogleText(output.answers[0].answer, speakHindi)
 
 def return_transcribed_word(responses):
     """returns the transcribed text from speech in String"""
     num_chars_printed = 0
     for response in responses:
+        print("======IN RESPONSE=============")
         if not response.results:
             continue
 
@@ -236,7 +254,7 @@ def return_transcribed_word(responses):
         # If the previous result was longer than this one, we need to print
         # some extra spaces to overwrite the previous result
         overwrite_chars = " " * (num_chars_printed - len(transcript))
-
+        print(transcript)
         if not result.is_final:
             # sys.stdout.write(transcript + overwrite_chars + "\r")
             sys.stdout.flush()
@@ -264,10 +282,11 @@ def takeCommand():
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=RATE,
         language_code=language_code,
+        alternative_language_codes = ['hi-IN']
     )
 
     streaming_config = speech.StreamingRecognitionConfig(
-        config=config, interim_results=True
+        config=config, interim_results=True, single_utterance = True
     )
 
     with MicrophoneStream(RATE, CHUNK) as stream:
@@ -278,9 +297,10 @@ def takeCommand():
         )
 
         responses = client.streaming_recognize(streaming_config, requests)
-
+        #TODO Check the streaming_recongize library to terminate the listening when no sound
+        print("------============RESPONSES GENERATED============================")
         # Now, put the transcription responses to use.
-        generateResponse(return_transcribed_word(responses))
+        return return_transcribed_word(responses)
 
 def listenHotword():
     pa=pyaudio.PyAudio()
@@ -302,14 +322,62 @@ def listenHotword():
             return True
             
 
+
+# def detectMotion():
+#     r=sr.Recognizer()
+#     audio_stream = pa.open(
+#                 rate=porcupine.sample_rate,
+#                 channels=1,
+#                 format=pyaudio.paInt16,
+#                 input=True,
+#                 frames_per_buffer=porcupine.frame_length)
+#     while True:
+#         pir.wait_for_motion()
+#         print("Movement detected")
+#         speakText("Hello, I am ready to listen")
+#         takeCommand(r,audio_stream)
+#         pir.wait_for_no_motion()
+#         print("motion reset")
+
+
+
 # wakeMotion=threading.Thread(target=detectMotion)
-print("program initiated..............")
-GPIO.output(4,GPIO.LOW)
-while(True):
-   # GPIO.output(27,GPIO.HIGH)
-    if listenHotword():
-        GPIO.output(4,GPIO.HIGH)
-        takeCommand()
-        GPIO.output(4,GPIO.LOW)
+# print("program initiated..............")
+# GPIO.output(4,GPIO.LOW)
+# while(True):
+#    # GPIO.output(27,GPIO.HIGH)
+#     if listenHotword():
+#         GPIO.output(4,GPIO.HIGH)
+#         takeCommand()
+#         GPIO.output(4,GPIO.LOW)
 #two threads were used for using the hotword and the pir sensor
 # wakeMotion.start()
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = "secret"
+socketio = SocketIO(app)
+@app.route('/')
+def main():
+    return render_template('index.html')
+text = ""
+@socketio.on('connect')
+def onConnect():
+    print("program initiated..............")
+    socketio.send('Program initiated!!')
+    GPIO.output(4,GPIO.LOW)
+    while(True):
+    # GPIO.output(27,GPIO.HIGH)
+        if listenHotword():
+            GPIO.output(4,GPIO.HIGH)
+            global text
+            text = takeCommand()
+            socketio.send(text)
+            generateResponse(text)
+            GPIO.output(4,GPIO.LOW)
+
+
+@socketio.on('message')
+def onMessage(msg):
+    socketio.send(text)
+if __name__ == '__main__':
+    socketio.run(app)

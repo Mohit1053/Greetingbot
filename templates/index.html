@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Greeting Bot</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js"></script>
+<script>
+    
+// sending a connect request to the server.
+    socket = io();
+    socket.connect('http://127.0.0.1:5000/');
+    //socket.on('connect', function(){
+    //    socket.send('a');
+    //})
+    socket.on('message', function(msg){
+       console.log(msg);
+       if(msg=='c') document.getElementById("text").innerHTML = "Please Say Mr. Diode";
+       else document.getElementById("text").innerHTML = msg;
+    })
+</script>
+</head>
+</head>
+<body>
+<h1 id='text'>Please Say Mr. Diode</h1>
+
+</body>
+</html>
