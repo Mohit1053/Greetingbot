@@ -19,14 +19,14 @@ pip install pymongo
 pip install dnspython
 pip install pvporcupine
 sudo apt-get install -y swig libpulse-dev
-pip install pocketsphinx
+sudo apt-get -y install pocketsphinx
 sudo apt-get install mpg123
 sudo apt-get install libportaudio0 libportaudio2 libportaudiocpp0 portaudio19-dev
 pip install --upgrade google-cloud-texttospeech
 pip install --upgrade google-cloud-speech
 
-## NOTE google-cloud-speech installs grpcio 1.46.1 version but 1.45.0
-Manually install grpcio == 1..45.0
+## NOTE google-cloud-speech installs grpcio 1.46.1 version but we want 1.45.0
+pip install grpcio==1.45.0
 
 set GOOGLE_APPLICATION_CREDENTIALS=C:\Users\yashj\Documents\gitrepo\GreetingBotRPI\ApiKey\speechToTextGoogleApiKey.json
 ```
