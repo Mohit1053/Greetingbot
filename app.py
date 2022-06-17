@@ -4,19 +4,18 @@ from flask_socketio import SocketIO
 from googletrans import Translator
 
 translator = Translator()  #initiliazing translator
-from ast import keyword
-from multiprocessing.connection import wait
 import re
-from turtle import delay
 import speech_recognition as sr
 import pyaudio
-from pocketsphinx import *
+import sys
+import os   
+# from pocketsphinx import *
 import pvporcupine
 import threading
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 wake = True
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(4,GPIO.OUT)
+# GPIO.setmode(GPIO.BCM)
+# GPIO.setup(4,GPIO.OUT)
 #GPIO.setup(27, GPIO.OUT)
 """IMPORTS FOR GOOGLE API"""
 from six.moves import queue
@@ -63,7 +62,7 @@ queriesCollection = queryList["queries"]
 notUnderstood = "I am not sure if I understood that correctly"
 porcupine = pvporcupine.create(
     access_key="zUOJpu87sR4uSIQj/fH9XFzHz1rla68/m642B3GygFDN36cB6fYvdA==",
-    keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn'],
+    keyword_paths=['/home/yash/Documents/greetingBotVoiceSystem/Mister-Diode_en_linux_v2_1_0.ppn'],
     keywords=['bumblebee']
 )
 
@@ -150,6 +149,7 @@ def speakGoogleText(text, speakHindi):
     if speakHindi:
         text_to_translate = translator.translate(text,src= 'en',dest= 'hi')
         text = text_to_translate.text
+    socketio.emit('command', text)
     client = texttospeech.TextToSpeechClient()
     # Set the text input to be synthesized
     synthesis_input = texttospeech.SynthesisInput(text=text)
@@ -183,18 +183,6 @@ def speakGoogleText(text, speakHindi):
 
 """====================================================================================================================="""
 
-def speakText(text):
-    # # for windows
-    # engine = pyttsx3.init("espeak")
-    # engine.setProperty("rate", 175)
-    # engine.say(text)
-    # engine.runAndWait()
-    # print(text)
-
-    #for rpi
-    cmd='pico2wave -l en-US -w hello.wav "'+ text+'"'
-    os.system(cmd)
-    os.system("aplay hello.wav")
 
 
 def generateResponse(userQuestion):
@@ -247,7 +235,7 @@ def return_transcribed_word(responses):
 
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
-
+        socketio.emit('command', transcript)
         # Display interim results, but with a carriage return at the end of the
         # line, so subsequent lines will overwrite them.
         #
@@ -363,21 +351,30 @@ text = ""
 @socketio.on('connect')
 def onConnect():
     print("program initiated..............")
-    socketio.send('Program initiated!!')
-    GPIO.output(4,GPIO.LOW)
+    # GPIO.output(4,GPIO.LOW)
+    socketio.send('start')
+
+
+# @socketio.on('message')
+# def message(msg):
+#     print('Message Recieved')
+#     socketio.send('Hello, Message Recieved')
+
+@socketio.on('message')
+def startRecognition(msg):
+    print(msg)
     while(True):
     # GPIO.output(27,GPIO.HIGH)
         if listenHotword():
-            GPIO.output(4,GPIO.HIGH)
+            socketio.emit('command', 'Speak Now')
+            # GPIO.output(4,GPIO.HIGH)
             global text
             text = takeCommand()
-            socketio.send(text)
             generateResponse(text)
-            GPIO.output(4,GPIO.LOW)
+            socketio.emit('command', 'Please Say Mr. Diode')
+            # GPIO.output(4,GPIO.LOW)
+    
 
 
-@socketio.on('message')
-def onMessage(msg):
-    socketio.send(text)
 if __name__ == '__main__':
     socketio.run(app)

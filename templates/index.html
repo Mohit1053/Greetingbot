@@ -9,10 +9,14 @@
 // sending a connect request to the server.
     socket = io();
     socket.connect('http://127.0.0.1:5000/');
-    //socket.on('connect', function(){
-    //    socket.send('a');
-    //})
+    socket.on('connect', function(){
+        socket.send('a');
+        console.log('Connection Estabilished');
+    })
     socket.on('message', function(msg){
+        if(msg == 'start') socket.send('start');
+    })
+    socket.on('command', function(msg){
        console.log(msg);
        if(msg=='c') document.getElementById("text").innerHTML = "Please Say Mr. Diode";
        else document.getElementById("text").innerHTML = msg;
@@ -21,7 +25,9 @@
 </head>
 </head>
 <body>
-<h1 id='text'>Please Say Mr. Diode</h1>
+    <div>
+    <h1 id='text' style= "text-align: center; padding: 350px 0px;">Please Say Mr. Diode</h1>
+    </div>
 
 </body>
 </html>
