@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Window</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js"></script>
+    <script>
+    socket = io();
+    socket.connect('http://127.0.0.1:5000/');
+    socket.on('connect', function(){
+        socket.send('a');
+        console.log('Connection Estabilished from TV');
+    })
+    socket.on('message', function(msg){
+        if(msg == 'start') socket.send('start');
+    })
+    socket.on('command', function(msg){
+       console.log(msg);
+       if(msg=='c') document.getElementById("chatText").innerHTML = "Please Say Mr. Diode";
+       else document.getElementById("chatText").innerHTML = msg;
+    })
+</script>
+</head>
+
+<style>
+    h1{
+        font-family: 'Roboto Mono';
+        font-style: normal;
+        font-weight: 350;
+        font-size: 40px;
+        line-height: 30px;
+        text-align: center;
+        color: #00204A;
+    }
+
+    .ImageBox{
+        background: #FFFFFF;
+        border: 1px solid #000000;
+        box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+        position: absolute;
+        width: 800px;
+        height: 550px;
+        left: 30px;
+    }
+
+    .ChatBox{
+        background-color: #D9FAFF;
+        box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+        position: absolute;
+        width: 430px;
+        height: 550px;
+        left: 860px;
+    }
+
+    body{
+        position: relative;
+        width: 1290px;
+        height: 700px;
+    }
+    .textDisplay{
+        position:absolute;
+        top: 150;
+        left: 20;
+        width: 390;
+    }
+
+    .imagestyle{
+        position: absolute;
+        height: 150px;
+        width: 150px;
+        left: 140px;
+        top: 10px
+    }
+
+    .visualImage{
+        position: inherit;
+    }
+
+</style>
+
+<body>
+    <h1> Mr. Diode</h1>
+    <header>
+        <div class="ImageBox">
+            <img src="../static/{{Imagepath}}" alt="Image" class="visualImage">
+        </div>
+
+        <div class="ChatBox">
+
+            <img src="../static/bot_face.png" alt="Test Image" class="imagestyle"/>
+
+            <div style="position: absolute;
+                top: 150px;
+                left: 20px;
+                width: 390px;
+                height: 350px;">
+                <p id= "chatText" style="font-size:20px;">
+                    {{text}}
+                </p>
+            </div>
+
+        </div>
+    </header>
+</body>
+</html>

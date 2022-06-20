@@ -1,3 +1,4 @@
+from django.shortcuts import render
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 #importing translator library
@@ -298,6 +299,7 @@ def listenHotword():
         channels=1,
         format=pyaudio.paInt16,
         input=True,
+        # input_device_index=1,
         frames_per_buffer=porcupine.frame_length)
     while True:
         pcm = audio_stream.read(porcupine.frame_length)
@@ -344,9 +346,14 @@ def listenHotword():
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret"
 socketio = SocketIO(app)
-@app.route('/')
-def main():
+@app.route('/screen')
+def showScreen():
     return render_template('index.html')
+
+@app.route('/tv')
+def showTvScreen():
+    return render_template('temp.html')
+
 text = ""
 @socketio.on('connect')
 def onConnect():
@@ -360,9 +367,17 @@ def onConnect():
 #     print('Message Recieved')
 #     socketio.send('Hello, Message Recieved')
 
-@socketio.on('message')
-def startRecognition(msg):
-    print(msg)
+# @socketio.on('message')
+# def startRecognition(msg):
+#     print(msg)
+
+@app.route('/')
+def load():
+    th =threading.Thread(target = startRecognition, args=())
+    th.start()
+
+def startRecognition():
+    print("=======starting the loop===========")
     while(True):
     # GPIO.output(27,GPIO.HIGH)
         if listenHotword():
