@@ -1,3 +1,4 @@
+from django.shortcuts import render
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 #importing translator library
@@ -310,6 +311,7 @@ def listenHotword():
         channels=1,
         format=pyaudio.paInt16,
         input=True,
+        # input_device_index=1,
         frames_per_buffer=porcupine.frame_length)
     while True:
         pcm = audio_stream.read(porcupine.frame_length)
@@ -356,7 +358,6 @@ def listenHotword():
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret"
 socketio = SocketIO(app)
-
 @app.route('/screen')
 def showScreen():
     return render_template('index.html')
@@ -392,18 +393,38 @@ def load():
     th.start()
 
 
+# @socketio.on('message')
+# def startRecognition(msg):
+#     print(msg)
+
+
+
+@app.route('/')
+def load():
+    th =threading.Thread(target = startRecognition, args=())
+    th.start()
+
 def startRecognition():
     print("=======starting the loop===========")
     while(True):
     # GPIO.output(27,GPIO.HIGH)
         if listenHotword():
+
             socketio.emit('command', 'Speak Now')
+            socketio.emit('ImageBox','../static/listening_mode.png')
+
             GPIO.output(4,GPIO.HIGH)
             global text
             text = takeCommand()
+
+            # for Images generate a function here
+
             generateResponse(text)
             socketio.emit('command', 'Please Say Mr. Diode')
             GPIO.output(4,GPIO.LOW)
+            socketio.emit('ImageBox','../static/botFace.png')
+            # GPIO.output(4,GPIO.LOW)
+    
 
 
 if __name__ == '__main__':
