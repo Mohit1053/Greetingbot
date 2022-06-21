@@ -7,21 +7,27 @@
     <title>Chat Window</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js"></script>
     <script>
-    socket = io();
-    socket.connect('http://127.0.0.1:5000/');
-    socket.on('connect', function(){
-        socket.send('a');
-        console.log('Connection Estabilished from TV');
-    })
-    socket.on('message', function(msg){
-        if(msg == 'start') socket.send('start');
-    })
-    socket.on('command', function(msg){
-       console.log(msg);
-       if(msg=='c') document.getElementById("chatText").innerHTML = "Please Say Mr. Diode";
-       else document.getElementById("chatText").innerHTML = msg;
-    })
-</script>
+        socket = io();
+        socket.connect('http://127.0.0.1:5000/');
+        socket.on('connect', function(){
+            socket.send('a');
+            console.log('Connection Estabilished from TV');
+        })
+        socket.on('message', function(msg){
+            if(msg == 'start') socket.send('start');
+        })
+        socket.on('command', function(msg){
+        console.log(msg);
+        if(msg=='c') document.getElementById("chatText").innerHTML = "Please Say Mr. Diode";
+        else document.getElementById("chatText").innerHTML = msg;
+        })
+
+        socket.on('ImageBox',function(path){
+            console.log(path)
+            document.getElementById("showImage").src = path;
+        })
+
+    </script>
 </head>
 
 <style>
@@ -75,7 +81,11 @@
     }
 
     .visualImage{
-        position: inherit;
+        position: absolute;
+        height: 400px;
+        width: 400px;
+        left: 200px;
+        top: 75px;
     }
 
 </style>
@@ -84,7 +94,7 @@
     <h1> Mr. Diode</h1>
     <header>
         <div class="ImageBox">
-            <img src="../static/{{Imagepath}}" alt="Image" class="visualImage">
+            <img id ="showImage" src='../static/botFace.png' alt="Image" class="visualImage"/>
         </div>
 
         <div class="ChatBox">
@@ -97,7 +107,7 @@
                 width: 390px;
                 height: 350px;">
                 <p id= "chatText" style="font-size:20px;">
-                    {{text}}
+                    Please say Mr.Diode
                 </p>
             </div>
 

@@ -371,6 +371,8 @@ def onConnect():
 # def startRecognition(msg):
 #     print(msg)
 
+
+
 @app.route('/')
 def load():
     th =threading.Thread(target = startRecognition, args=())
@@ -381,12 +383,19 @@ def startRecognition():
     while(True):
     # GPIO.output(27,GPIO.HIGH)
         if listenHotword():
+
             socketio.emit('command', 'Speak Now')
+            socketio.emit('ImageBox','../static/listening_mode.png')
+
             # GPIO.output(4,GPIO.HIGH)
             global text
             text = takeCommand()
+
+            # for Images generate a function here
+
             generateResponse(text)
             socketio.emit('command', 'Please Say Mr. Diode')
+            socketio.emit('ImageBox','../static/botFace.png')
             # GPIO.output(4,GPIO.LOW)
     
 
