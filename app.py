@@ -1,21 +1,19 @@
-from django.shortcuts import render
+from pyexpat import model
+import webbrowser
+from threading import Timer
 from flask import Flask, render_template
 from flask_socketio import SocketIO
 #importing translator library
 from googletrans import Translator
-
-translator = Translator()  #initiliazing translator
-from ast import keyword
-from multiprocessing.connection import wait
-import re
-from turtle import delay
 import speech_recognition as sr
 import pyaudio
 from pocketsphinx import *
 import pvporcupine
 import threading
 import RPi.GPIO as GPIO
+translator = Translator()  #initiliazing translator
 wake = True
+inHindi = False
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(4,GPIO.OUT)
 #GPIO.setup(27, GPIO.OUT)
@@ -23,8 +21,8 @@ GPIO.setup(4,GPIO.OUT)
 from six.moves import queue
 
 from google.cloud import speech
-RATE = 16000
-CHUNK = int(RATE / 10)  # 100ms
+RATE = 32000
+CHUNK = 200  # 100ms
 """==============================="""
 import struct
 
@@ -42,7 +40,6 @@ knowledge_base_project = "questionDataBase"
 deployment = "production"
 
 # ---------------------------------------------------------------------------------------------------------------
-
 # mongo db initialization
 from pymongo import MongoClient
 import pymongo
@@ -64,7 +61,7 @@ queriesCollection = queryList["queries"]
 notUnderstood = "I am not sure if I understood that correctly"
 porcupine = pvporcupine.create(
     access_key="zUOJpu87sR4uSIQj/fH9XFzHz1rla68/m642B3GygFDN36cB6fYvdA==",
-    keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn'],
+    keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn','/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Circuit_en_raspberry-pi_v2_1_0.ppn' ],
     keywords=['bumblebee']
 )
 
@@ -121,7 +118,7 @@ class MicrophoneStream(object):
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
-            chunk = self._buff.get()
+            chunk = self._buff.get(timeout = 5)
             if chunk is None:
                 return
             data = [chunk]
@@ -129,7 +126,7 @@ class MicrophoneStream(object):
             # Now consume whatever other data's still buffered.
             while True:
                 try:
-                    chunk = self._buff.get(block=False)
+                    chunk = self._buff.get(block=False,timeout = 5)
                     if chunk is None:
                         return
                     data.append(chunk)
@@ -151,6 +148,7 @@ def speakGoogleText(text, speakHindi):
     if speakHindi:
         text_to_translate = translator.translate(text,src= 'en',dest= 'hi')
         text = text_to_translate.text
+    socketio.emit('command', text)
     client = texttospeech.TextToSpeechClient()
     # Set the text input to be synthesized
     synthesis_input = texttospeech.SynthesisInput(text=text)
@@ -201,6 +199,12 @@ def speakText(text):
 def generateResponse(userQuestion):
     #if in hindi, convert to english and then send to azure
     #use translator.detect
+    print(f"============================Question by user: {userQuestion}==================")
+    if text == "":
+        print("Text is None")
+        return
+    if text.isspace():
+        return
     lang  = translator.detect(userQuestion)
     speakHindi = False
     if(lang.lang == 'hi'):
@@ -232,9 +236,13 @@ def generateResponse(userQuestion):
        speakGoogleText(output.answers[0].answer, speakHindi)
 
 def return_transcribed_word(responses):
+    if responses == None:
+        return ""
     """returns the transcribed text from speech in String"""
     num_chars_printed = 0
     for response in responses:
+        if(response ==None):
+            continue
         print("======IN RESPONSE=============")
         if not response.results:
             continue
@@ -248,6 +256,10 @@ def return_transcribed_word(responses):
 
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
+        if(transcript == None):
+            return transcript
+        global isListening
+        isListening = True
         socketio.emit('command', transcript)
         # Display interim results, but with a carriage return at the end of the
         # line, so subsequent lines will overwrite them.
@@ -256,6 +268,7 @@ def return_transcribed_word(responses):
         # some extra spaces to overwrite the previous result
         overwrite_chars = " " * (num_chars_printed - len(transcript))
         print(transcript)
+        
         if not result.is_final:
             # sys.stdout.write(transcript + overwrite_chars + "\r")
             sys.stdout.flush()
@@ -274,16 +287,18 @@ def return_transcribed_word(responses):
             num_chars_printed = 0
 
 
-def takeCommand():
+def takeCommand(langHindi):
     """"takes the command and generates speech from the command generated"""
-    language_code = "en-IN"  # a BCP-47 language tag
-
+    if(langHindi == False):
+        language_code = "en-IN"  # a BCP-47 language tag
+    else:
+        language_code = "hi-IN"  # a BCP-47 language tag
     client = speech.SpeechClient()
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=RATE,
         language_code=language_code,
-        alternative_language_codes = ['hi-IN']
+        model = 'latest_short',
     )
 
     streaming_config = speech.StreamingRecognitionConfig(
@@ -296,8 +311,11 @@ def takeCommand():
             speech.StreamingRecognizeRequest(audio_content=content)
             for content in audio_generator
         )
-
-        responses = client.streaming_recognize(streaming_config, requests)
+        try:
+            responses = client.streaming_recognize(streaming_config, requests)
+        except:
+            print("Request timeout")
+            responses = None
         #TODO Check the streaming_recongize library to terminate the listening when no sound
         print("------============RESPONSES GENERATED============================")
         # Now, put the transcription responses to use.
@@ -313,12 +331,23 @@ def listenHotword():
         input=True,
         # input_device_index=1,
         frames_per_buffer=porcupine.frame_length)
+    global inHindi
     while True:
         pcm = audio_stream.read(porcupine.frame_length)
         pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
         keyword_index = porcupine.process(pcm)
-        if keyword_index >= 0:
-            print("Hotword Detected")
+        #0 for diode, 1 for circuit
+        if keyword_index == 0:
+            print("English Hotword Detected")
+            inHindi = False
+            audio_stream.close()
+            pa.terminate()
+            return True
+
+        if keyword_index == 1:
+            print("Hindi Hotword Detected")
+            
+            inHindi = True
             audio_stream.close()
             pa.terminate()
             return True
@@ -355,16 +384,21 @@ def listenHotword():
 #two threads were used for using the hotword and the pir sensor
 # wakeMotion.start()
 
+
+
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret"
 socketio = SocketIO(app)
-@app.route('/screen')
-def showScreen():
-    return render_template('index.html')
+#@app.route('/screen')
+#def showScreen():
+#    return render_template('index.html')
 
-@app.route('/tv')
+@app.route('/screen')
 def showTvScreen():
-    return render_template('temp.html')
+    th =threading.Thread(target = startRecognition, args=())
+    th.start()
+    return render_template('index.html')
 
 text = ""
 @socketio.on('connect')
@@ -372,37 +406,8 @@ def onConnect():
     print("program initiated..............")
     GPIO.output(4,GPIO.LOW)
     socketio.send('start')
-    
-# @socketio.on('message')
-# def startRecognition(msg):
-#     print(msg)
-#     while(True):
-#     # GPIO.output(27,GPIO.HIGH)
-#         if listenHotword():
-#             socketio.emit('command', 'Speak Now')
-#             GPIO.output(4,GPIO.HIGH)
-#             global text
-#             text = takeCommand()
-#             generateResponse(text)
-#             socketio.emit('command', 'Please Say Mr. Diode')
-#             GPIO.output(4,GPIO.LOW)
-
-@app.route('/')
-def load():
-    th =threading.Thread(target = startRecognition, args=())
-    th.start()
 
 
-# @socketio.on('message')
-# def startRecognition(msg):
-#     print(msg)
-
-
-
-@app.route('/')
-def load():
-    th =threading.Thread(target = startRecognition, args=())
-    th.start()
 
 def startRecognition():
     print("=======starting the loop===========")
@@ -415,12 +420,24 @@ def startRecognition():
 
             GPIO.output(4,GPIO.HIGH)
             global text
-            text = takeCommand()
+            
+        
+            print(f"The language is hindi: {inHindi}")
+            text = takeCommand(inHindi)
+            
+                # text = ""
 
             # for Images generate a function here
 
             generateResponse(text)
-            socketio.emit('command', 'Please Say Mr. Diode')
+            socketio.emit('command', """<p style= "text-align: center"> Hi! You can ask me any question related to ECE Labs <br> Try Saying <i> "Mr. Diode, Who are you"</i> </p><br><br>
+        <p><b>Instructions to use:</b><br>
+               &emsp;&emsp;1) Please say “Mr. Diode (Mr. Circuit to talk in Hindi)”.<br>
+               &emsp;&emsp;2)LED will glow in red color.<br>
+               &emsp;&emsp;3)Please ask your question related to ECE Labs.<br>
+               &emsp;&emsp;4)Once the question is answered the LED will turn off. <br>
+               &emsp;&emsp;5)Repeat from step 1 for subsequent query. <br>
+               <br><br><br><br></p>""")
             GPIO.output(4,GPIO.LOW)
             socketio.emit('ImageBox','../static/botFace.png')
             # GPIO.output(4,GPIO.LOW)
@@ -428,4 +445,5 @@ def startRecognition():
 
 
 if __name__ == '__main__':
+    # Timer(3, open_browser).start()
     socketio.run(app)
