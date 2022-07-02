@@ -346,6 +346,11 @@ def listenHotword():
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret"
 socketio = SocketIO(app)
+counterFile = open('counter.txt', 'r')
+counter = counterFile.read()
+counter = int(counter)
+print(f"counter===================={counter}==================")
+
 @app.route('/screen')
 def showScreen():
     return render_template('index.html')
@@ -392,8 +397,14 @@ def startRecognition():
             text = takeCommand()
 
             # for Images generate a function here
-
+            counterFile = open('counter.txt', 'w')
             generateResponse(text)
+            global counter
+            counter+=1
+            
+            print(f"COUNTER============{counter}=============")
+            counterFile.write(str(counter))
+            counterFile.close()
             socketio.emit('command', 'Please Say Mr. Diode')
             socketio.emit('ImageBox','../static/botFace.png')
             # GPIO.output(4,GPIO.LOW)
