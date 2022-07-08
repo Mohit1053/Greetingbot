@@ -1,4 +1,6 @@
+
 from pyexpat import model
+import time
 import webbrowser
 from threading import Timer
 from flask import Flask, render_template
@@ -46,7 +48,7 @@ import pymongo
 client = MongoClient(
    "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
 queryList = client['QueryLog']
-queriesCollection = queryList["queries"]
+queriesCollection = queryList["queriesPostMount"]
 # query = {
 #            "Question": "start Test",
 #            "Answer": "working"
@@ -293,12 +295,53 @@ def takeCommand(langHindi):
         language_code = "en-IN"  # a BCP-47 language tag
     else:
         language_code = "hi-IN"  # a BCP-47 language tag
+    
+    # project_id = 'qna-bot-343107'
+    # location = 'global'
+    
+    # adaptation_client = speech.AdaptationClient()
+    # parent = f"projects/{project_id}/locations/{location}"
+    # adaptation_client.create_custom_class(
+    #     {
+    #         "parent": parent,
+    #         "custom_class_id": custom_class_id,
+    #         "custom_class": {
+    #             "items": [
+    #                 {"value": "sushido"},
+    #                 {"value": "altura"},
+    #                 {"value": "taneda"},
+    #             ]
+    #         },
+    #     }
+    # )
+    # custom_class_name = (
+    #     f"projects/{project_id}/locations/{location}/customClasses/{custom_class_id}"
+    # )
+    # phrase_set_response = adaptation_client.create_phrase_set(
+    #     {
+    #         "parent": parent,
+    #         "phrase_set_id": phrase_set_id,
+    #         "phrase_set": {
+    #             "boost": 10,
+    #             "phrases": [
+    #                 {"value": f"Visit restaurants like ${{{custom_class_name}}}"}
+    #             ],
+    #         },
+    #     }
+    # )
+    # phrase_set_name = phrase_set_response.name
+    # speech_adaptation = speech.SpeechAdaptation(phrase_set_references=[phrase_set_name])
     client = speech.SpeechClient()
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=RATE,
         language_code=language_code,
+        use_senhanced = True,
         model = 'latest_short',
+        speech_contexts = [{'phrases':["shannon"], 'boost':18}, {'phrases':["channel"], 'boost':4}],
+        profanity_filter = True
+        # speech.SpeechContext(phrases=["ece", "shannon", "lab", "labs", "RF"])
+        
     )
 
     streaming_config = speech.StreamingRecognitionConfig(
@@ -410,11 +453,19 @@ def onConnect():
 
 
 def startRecognition():
+    counterFile = open('counter.txt', 'r')
+    counter = counterFile.read()
+    counter = int(counter)
+    print(f"==============counter: {counter}==================")
+    counterFile.close()    
     print("=======starting the loop===========")
+    time.sleep(2)
+    socketio.emit('counterUpdate', counter)
+    testActive = True
     while(True):
     # GPIO.output(27,GPIO.HIGH)
         if listenHotword():
-
+            testActive = False
             socketio.emit('command', 'Speak Now')
             socketio.emit('ImageBox','../static/listening_mode.png')
 
@@ -430,14 +481,19 @@ def startRecognition():
             # for Images generate a function here
 
             generateResponse(text)
+            counterFile = open('counter.txt', 'w')
+            counter+=1
+            counterFile.write(str(counter))
+            counterFile.close()
             socketio.emit('command', """<p style= "text-align: center"> Hi! You can ask me any question related to ECE Labs <br> Try Saying <i> "Mr. Diode, Who are you"</i> </p><br><br>
-        <p><b>Instructions to use:</b><br>
+        <b>Instructions to use:</b><br>
                &emsp;&emsp;1) Please say “Mr. Diode (Mr. Circuit to talk in Hindi)”.<br>
                &emsp;&emsp;2)LED will glow in red color.<br>
                &emsp;&emsp;3)Please ask your question related to ECE Labs.<br>
                &emsp;&emsp;4)Once the question is answered the LED will turn off. <br>
                &emsp;&emsp;5)Repeat from step 1 for subsequent query. <br>
-               <br><br><br><br></p>""")
+               <br><br><br><br>""")
+            socketio.emit('counterUpdate', counter)
             GPIO.output(4,GPIO.LOW)
             socketio.emit('ImageBox','../static/botFace.png')
             # GPIO.output(4,GPIO.LOW)

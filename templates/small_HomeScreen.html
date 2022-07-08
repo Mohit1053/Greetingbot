@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Small_HomeScreen</title>
+
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script>
+
+        // socket = io();
+        // socket.connect('http://127.0.0.1:5000/');
+        // socket.on('connect', function(){
+        //     socket.send('a');
+        //     console.log('Connection Estabilished from TV');
+        // })
+        // socket.on('message', function(msg){
+        //     if(msg == 'start') socket.send('start');
+        // })
+        // socket.on('command', function(msg){
+        // console.log(msg);
+        // if(msg=='c') document.getElementById("chatText").innerHTML = "Please Say Mr. Diode";
+        // else document.getElementById("chatOutput").innerHTML = msg;
+        // })
+
+
+        
+    </script>
+</head>
+
+<body>
+    <div class="top">Please say Mr.Diode</div>
+
+    <div class="parent">
+        <div class="Qrbox">
+            <div class="QR">
+
+            </div>
+
+            <div class="counter">
+            <div class="block">
+                <div class="box">
+                    <p class="number">
+                        <span class="num">250</span>
+                    </p>
+                </div>
+                <span class="dots"></span>
+                <svg class="svg">
+                    <defs>
+                        <linearGradient id="gradientStyle">
+                            <stop offset="0%" stop-color="#565656" />
+                            <stop offset="100%" stop-color="#b7b5b5" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="circle" cx="90" cy="90" r="80" />
+                </svg>
+            </div>
+
+            <div class="counttext">
+                <p>
+                    Numebr of Questions asked
+                </p>
+            </div>
+
+            </div>
+
+            <script>
+
+                const block = document.querySelectorAll('.block');
+                window.addEventListener('load', function(){
+                block.forEach(item => {
+
+                let numElement = item.querySelector('.num');
+                let num = parseInt(numElement.innerText);
+                let newnum = 100*(num/1000);
+                let count = 0;
+                let time = 1000 / num;
+                let circle = item.querySelector('.circle');
+
+                setInterval(() => {
+                if(count == num){
+                    clearInterval();
+                } else {
+                    count += 1;
+                    numElement.innerText = count;
+                }
+                }, time)
+
+                circle.style.strokeDashoffset = 503 - ( 503 * ( newnum / 100 ));
+                let dots = item.querySelector('.dots');
+                dots.style.transform = `rotate(${360 * (newnum / 100)}deg)`;
+                // if(num == 100){
+                // dots.style.opacity = 0;
+                // }
+                })
+                });
+            </script>
+
+        </div>
+
+        <div class="Chatbox">
+
+            <div class="Imagediv"> 
+                <img src="../static/bot_face.png" alt="" class="botface"/>
+            </div>
+
+            <div class="chatText">
+                <p id="chatOutput">
+                    Hey There !
+                </p>
+            </div>
+
+        </div>
+    </div>
+    
+</body>
+</html>
