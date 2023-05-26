@@ -1,11 +1,25 @@
+# GPIO 17 for the shutdown utility
+# GPIO 27 for the  fan
 
+
+from google.cloud import texttospeech
+import pymongo
+from pymongo import MongoClient
+from azure.ai.language.questionanswering import QuestionAnsweringClient
+from pymongo.server_api import ServerApi
+from azure.core.credentials import AzureKeyCredential
+import struct
+from google.cloud import speech
+from six.moves import queue
+from lib2to3.pgen2 import driver
+from lib2to3.pgen2.driver import Driver
 from pyexpat import model
 import time
 import webbrowser
 from threading import Timer
 from flask import Flask, render_template
 from flask_socketio import SocketIO
-#importing translator library
+# importing translator library
 from googletrans import Translator
 import speech_recognition as sr
 import pyaudio
@@ -13,40 +27,34 @@ from pocketsphinx import *
 import pvporcupine
 import threading
 import RPi.GPIO as GPIO
-translator = Translator()  #initiliazing translator
+
+from selenium import webdriver
+
+translator = Translator()  # initiliazing translator
 wake = True
 inHindi = False
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(4,GPIO.OUT)
+GPIO.setup(4, GPIO.OUT)
 #GPIO.setup(27, GPIO.OUT)
 """IMPORTS FOR GOOGLE API"""
-from six.moves import queue
 
-from google.cloud import speech
-RATE = 32000
-CHUNK = 200  # 100ms
+RATE = 16000  #the sample rate of the microphone
+CHUNK = 80  # 100ms  
+"""reduced chunk rate for low latency. high chunks mean high latency but high accuracy"""
 """==============================="""
-import struct
 
-from six.moves import queue
 # azure imports-------------------------------------------------------------------
-from azure.core.credentials import AzureKeyCredential
 
-from pymongo.server_api import ServerApi
 
-from azure.ai.language.questionanswering import QuestionAnsweringClient
-
-endpoint = "https://voicenlp.cognitiveservices.azure.com/"
-credential = AzureKeyCredential("d50a821ee99141a9a841efffeeae28dc")
-knowledge_base_project = "questionDataBase"
+endpoint = "https://greetingbotqna.cognitiveservices.azure.com/"
+credential = AzureKeyCredential("c48f1d66b43a4392886b600513ce3044")
+knowledge_base_project = "qna"
 deployment = "production"
 
 # ---------------------------------------------------------------------------------------------------------------
 # mongo db initialization
-from pymongo import MongoClient
-import pymongo
 client = MongoClient(
-   "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
+    "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
 queryList = client['QueryLog']
 queriesCollection = queryList["queriesPostMount"]
 # query = {
@@ -63,13 +71,17 @@ queriesCollection = queryList["queriesPostMount"]
 notUnderstood = "I am not sure if I understood that correctly"
 porcupine = pvporcupine.create(
     access_key="zUOJpu87sR4uSIQj/fH9XFzHz1rla68/m642B3GygFDN36cB6fYvdA==",
-    keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn','/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Circuit_en_raspberry-pi_v2_1_0.ppn' ],
+    keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn',
+                   '/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Circuit_en_raspberry-pi_v2_1_0.ppn'],
     keywords=['bumblebee']
 )
 
+shortQuesList= {'who are you':'I am here to help you with some inintial questions regarding ECE Labs', 'Who are you':'I am here to help you with some inintial questions regarding ECE Labs', 'Who are you?':'I am here to help you with some inintial questions regarding ECE Labs', 'who are you?':'I am here to help you with some inintial questions regarding ECE Labs', 'Hello Mr. Diode':'Hey there! How can I help you?', 'Hi Mr. Diode':'Hey there! How can I help you?'}
 
 """USING GOOGLE SPEECH TO TEXT
 ---------------------THE CODE START FROM HERE------------------------"""
+
+
 class MicrophoneStream(object):
     """Opens a recording stream as a generator yielding the audio chunks."""
 
@@ -120,7 +132,7 @@ class MicrophoneStream(object):
             # Use a blocking get() to ensure there's at least one chunk of
             # data, and stop iteration if the chunk is None, indicating the
             # end of the audio stream.
-            chunk = self._buff.get(timeout = 5)
+            chunk = self._buff.get(timeout=5)
             if chunk is None:
                 return
             data = [chunk]
@@ -128,7 +140,7 @@ class MicrophoneStream(object):
             # Now consume whatever other data's still buffered.
             while True:
                 try:
-                    chunk = self._buff.get(block=False,timeout = 5)
+                    chunk = self._buff.get(block=False, timeout=5)
                     if chunk is None:
                         return
                     data.append(chunk)
@@ -140,7 +152,6 @@ class MicrophoneStream(object):
 
 """================================================================================================================"""
 """   USING GOOGLE TEXT TO SPEECH CONVERSION"""
-from google.cloud import texttospeech
 
 # Instantiates a client
 
@@ -148,7 +159,7 @@ from google.cloud import texttospeech
 def speakGoogleText(text, speakHindi):
     #  recognize the text language and program accordingly.
     if speakHindi:
-        text_to_translate = translator.translate(text,src= 'en',dest= 'hi')
+        text_to_translate = translator.translate(text, src='en', dest='hi')
         text = text_to_translate.text
     socketio.emit('command', text)
     client = texttospeech.TextToSpeechClient()
@@ -158,7 +169,7 @@ def speakGoogleText(text, speakHindi):
     # Build the voice request, select the language code ("en-US") and the ssml
     # voice gender ("neutral")
     voice = texttospeech.VoiceSelectionParams(
-        language_code="hi-IN", ssml_gender=texttospeech.SsmlVoiceGender.MALE
+        language_code="hi-IN", name="hi-IN-Wavenet-C"
     )
 
     # Select the type of audio file you want returned
@@ -181,8 +192,8 @@ def speakGoogleText(text, speakHindi):
     os.system('rm output.wav')
 
 
-
 """====================================================================================================================="""
+
 
 def speakText(text):
     # # for windows
@@ -192,28 +203,36 @@ def speakText(text):
     # engine.runAndWait()
     # print(text)
 
-    #for rpi
-    cmd='pico2wave -l en-US -w hello.wav "'+ text+'"'
+    # for rpi
+    cmd = 'pico2wave -l en-US -w hello.wav "' + text+'"'
     os.system(cmd)
     os.system("aplay hello.wav")
 
 
 def generateResponse(userQuestion):
-    #if in hindi, convert to english and then send to azure
-    #use translator.detect
-    print(f"============================Question by user: {userQuestion}==================")
+    # if in hindi, convert to english and then send to azure
+    # use translator.detect
+    print(
+        f"============================Question by user: {userQuestion}==================")
     if text == "":
         print("Text is None")
         return
     if text.isspace():
         return
-    lang  = translator.detect(userQuestion)
+    lang = translator.detect(userQuestion)
     speakHindi = False
-    if(lang.lang == 'hi'):
+    if (lang.lang == 'hi'):
         speakHindi = True
-        englishText = translator.translate(userQuestion, source = 'hi', dest = 'en')
+        englishText = translator.translate(
+            userQuestion, source='hi', dest='en')
         userQuestion = englishText.text
     """Generates response from the given user question and outputs the speech converted"""
+
+    print("Translation finished====================")
+    if(userQuestion in shortQuesList.keys()):
+        speakGoogleText(shortQuesList[userQuestion], speakHindi)
+        return
+    
     client = QuestionAnsweringClient(endpoint, credential)
     with client:
         question = userQuestion
@@ -228,37 +247,37 @@ def generateResponse(userQuestion):
     print("Confidence Score: {}".format(output.answers[0].confidence))
 
     if (output.answers[0].confidence < 0.37):
-       query = {
-           "Question": question,
-           "Answer": output.answers[0].answer
-       }
-       queriesCollection.insert_one(query)
-       speakGoogleText(notUnderstood, speakHindi)
+        query = {
+            "Question": question,
+            "Answer": output.answers[0].answer
+        }
+        queriesCollection.insert_one(query)
+        speakGoogleText(notUnderstood, speakHindi)
     else:
-       speakGoogleText(output.answers[0].answer, speakHindi)
+        speakGoogleText(output.answers[0].answer, speakHindi)
+
 
 def return_transcribed_word(responses):
+    global text
     if responses == None:
         return ""
     """returns the transcribed text from speech in String"""
     num_chars_printed = 0
     for response in responses:
-        if(response ==None):
-            continue
-        print("======IN RESPONSE=============")
+        print(f"======IN RESPONSE=============   {len(response.results)}")
         if not response.results:
             continue
-
         # The `results` list is consecutive. For streaming, we only care about
         # the first result being considered, since once it's `is_final`, it
         # moves on to considering the next utterance.
+        #inerm results
         result = response.results[0]
         if not result.alternatives:
             continue
 
         # Display the transcription of the top alternative.
         transcript = result.alternatives[0].transcript
-        if(transcript == None):
+        if (transcript == None):
             return transcript
         global isListening
         isListening = True
@@ -270,7 +289,8 @@ def return_transcribed_word(responses):
         # some extra spaces to overwrite the previous result
         overwrite_chars = " " * (num_chars_printed - len(transcript))
         print(transcript)
-        
+        text = transcript
+
         if not result.is_final:
             # sys.stdout.write(transcript + overwrite_chars + "\r")
             sys.stdout.flush()
@@ -291,14 +311,14 @@ def return_transcribed_word(responses):
 
 def takeCommand(langHindi):
     """"takes the command and generates speech from the command generated"""
-    if(langHindi == False):
+    if (langHindi == False):
         language_code = "en-IN"  # a BCP-47 language tag
     else:
         language_code = "hi-IN"  # a BCP-47 language tag
-    
+
     # project_id = 'qna-bot-343107'
     # location = 'global'
-    
+
     # adaptation_client = speech.AdaptationClient()
     # parent = f"projects/{project_id}/locations/{location}"
     # adaptation_client.create_custom_class(
@@ -336,16 +356,17 @@ def takeCommand(langHindi):
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=RATE,
         language_code=language_code,
-        use_senhanced = True,
-        model = 'latest_short',
-        speech_contexts = [{'phrases':["shannon"], 'boost':18}, {'phrases':["channel"], 'boost':4}],
-        profanity_filter = True
+        use_enhanced=True,
+        model='latest_short',
+        speech_contexts=[{'phrases': ["shannon"], 'boost':18}, {
+            'phrases': ["channel"], 'boost':4}],
+        profanity_filter=True
         # speech.SpeechContext(phrases=["ece", "shannon", "lab", "labs", "RF"])
-        
+
     )
 
     streaming_config = speech.StreamingRecognitionConfig(
-        config=config, interim_results=True, single_utterance = True
+        config=config, interim_results=True, single_utterance=True
     )
 
     with MicrophoneStream(RATE, CHUNK) as stream:
@@ -355,17 +376,18 @@ def takeCommand(langHindi):
             for content in audio_generator
         )
         try:
-            responses = client.streaming_recognize(streaming_config, requests)
+            responses = client.streaming_recognize(streaming_config, requests, timeout=8)
         except:
             print("Request timeout")
             responses = None
-        #TODO Check the streaming_recongize library to terminate the listening when no sound
+        # TODO Check the streaming_recongize library to terminate the listening when no sounds
         print("------============RESPONSES GENERATED============================")
         # Now, put the transcription responses to use.
         return return_transcribed_word(responses)
 
+
 def listenHotword():
-    pa=pyaudio.PyAudio()
+    pa = pyaudio.PyAudio()
     r = sr.Recognizer()
     audio_stream = pa.open(
         rate=porcupine.sample_rate,
@@ -379,7 +401,7 @@ def listenHotword():
         pcm = audio_stream.read(porcupine.frame_length)
         pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
         keyword_index = porcupine.process(pcm)
-        #0 for diode, 1 for circuit
+        # 0 for diode, 1 for circuit
         if keyword_index == 0:
             print("English Hotword Detected")
             inHindi = False
@@ -389,12 +411,11 @@ def listenHotword():
 
         if keyword_index == 1:
             print("Hindi Hotword Detected")
-            
+
             inHindi = True
             audio_stream.close()
             pa.terminate()
             return True
-            
 
 
 # def detectMotion():
@@ -414,7 +435,6 @@ def listenHotword():
 #         print("motion reset")
 
 
-
 # wakeMotion=threading.Thread(target=detectMotion)
 # print("program initiated..............")
 # GPIO.output(4,GPIO.LOW)
@@ -424,32 +444,33 @@ def listenHotword():
 #         GPIO.output(4,GPIO.HIGH)
 #         takeCommand()
 #         GPIO.output(4,GPIO.LOW)
-#two threads were used for using the hotword and the pir sensor
+# two threads were used for using the hotword and the pir sensor
 # wakeMotion.start()
-
-
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "secret"
 socketio = SocketIO(app)
-#@app.route('/screen')
-#def showScreen():
+# @app.route('/screen')
+# def showScreen():
 #    return render_template('index.html')
+
 
 @app.route('/screen')
 def showTvScreen():
-    th =threading.Thread(target = startRecognition, args=())
+    th = threading.Thread(target=startRecognition, args=())
     th.start()
-    return render_template('index.html')
+    return render_template('small_HomeScreen.html')
+
 
 text = ""
+
+
 @socketio.on('connect')
 def onConnect():
     print("program initiated..............")
-    GPIO.output(4,GPIO.LOW)
+    GPIO.output(4, GPIO.LOW)
     socketio.send('start')
-
 
 
 def startRecognition():
@@ -457,47 +478,58 @@ def startRecognition():
     counter = counterFile.read()
     counter = int(counter)
     print(f"==============counter: {counter}==================")
-    counterFile.close()    
+    counterFile.close()
+
+    prevcounter = counter
+    # driver = webdriver.Chrome(executable_path="/usr/bin/chromedriver")
+    # driver.get("http://127.0.0.1:5000/screen")
+
     print("=======starting the loop===========")
-    time.sleep(2)
-    socketio.emit('counterUpdate', counter)
+    time.sleep(1.5)
+    socketio.emit('counterUpdate', (counter, prevcounter))
     testActive = True
-    while(True):
-    # GPIO.output(27,GPIO.HIGH)
+    while (True):
         if listenHotword():
+            prevcounter = counter
             testActive = False
             socketio.emit('command', 'Speak Now')
-            socketio.emit('ImageBox','../static/listening_mode.png')
-
-            GPIO.output(4,GPIO.HIGH)
+            socketio.emit('ImageBox', '../static/listening_mode.png')
             global text
-            
-        
             print(f"The language is hindi: {inHindi}")
-            text = takeCommand(inHindi)
-            
+            try:
+                text = takeCommand(inHindi)
+            except:
+                if(text == None):
+                    speakGoogleText("I didn't get that properly. Probably I need to brush my ears....", False)
+
                 # text = ""
 
             # for Images generate a function here
+            try:
+                generateResponse(text)
+            except:
+                speakGoogleText(
+                    "Sorry, I lost my attention because I was busy seeing your smile!", False)
 
-            generateResponse(text)
             counterFile = open('counter.txt', 'w')
-            counter+=1
+            counter += 1
             counterFile.write(str(counter))
             counterFile.close()
-            socketio.emit('command', """<p style= "text-align: center"> Hi! You can ask me any question related to ECE Labs <br> Try Saying <i> "Mr. Diode, Who are you"</i> </p><br><br>
+            socketio.emit('command', """<p style= "text-align: center"> Hi! You can ask me any question related to ECE Labs <br> Try Saying <i> "Mr. Diode, Who are you"</i> </p>
         <b>Instructions to use:</b><br>
-               &emsp;&emsp;1) Please say “Mr. Diode (Mr. Circuit to talk in Hindi)”.<br>
-               &emsp;&emsp;2)LED will glow in red color.<br>
-               &emsp;&emsp;3)Please ask your question related to ECE Labs.<br>
-               &emsp;&emsp;4)Once the question is answered the LED will turn off. <br>
-               &emsp;&emsp;5)Repeat from step 1 for subsequent query. <br>
+               1)Please say "Mr. Diode" to activate (या हिंदी भाषा के लिए "मिस्टर सर्किट").<br>
+               2)After Activation, "Speak Now" will be displayed on the screen.<br>
+               3)Please ask your question related to ECE labs. (You question will be displayed on the screen as heard by the bot)<br>
+               4)Once the question is answered, the display will return to default.<br>
+               5)Repeat from step-1 for subsequent query. <br>
                <br><br><br><br>""")
-            socketio.emit('counterUpdate', counter)
-            GPIO.output(4,GPIO.LOW)
-            socketio.emit('ImageBox','../static/botFace.png')
+            socketio.emit('counterUpdate', (counter, prevcounter))
+
+            # driver.refresh()
+
+            GPIO.output(4, GPIO.LOW)
+            socketio.emit('ImageBox', '../static/botFace.png')
             # GPIO.output(4,GPIO.LOW)
-    
 
 
 if __name__ == '__main__':
