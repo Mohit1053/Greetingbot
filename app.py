@@ -42,46 +42,14 @@ RATE = 16000  #the sample rate of the microphone
 CHUNK = 80  # 100ms  
 """reduced chunk rate for low latency. high chunks mean high latency but high accuracy"""
 """==============================="""
-##############################################################################################################################
-import pandas as pd
 
-def count_matches(question, word_list):
-    """
-    Counts the number of matches between a given question and a list of words.
-    """
-    count = 0
-    for word in word_list:
-        if word in question:
-            count += 1
-    return count
-
-def find_answer(question, data):
-    """
-    Matches the given question with the maximum number of matching words in the data and returns the corresponding answer.
-    """
-    max_matches = 0
-    answer = None
-
-    for i, row in data.iterrows():
-        current_question = row['Question']
-        current_matches = count_matches(question, current_question.split())
-
-        if current_matches > max_matches:
-            max_matches = current_matches
-            answer = row['Answer']
-
-    return answer
-
-# Load the data from a CSV file
-data = pd.read_csv('data.csv')  # Replace 'data.csv' with your data file path
-
-# Example usage
-input_question = input("What's your question")
-answer = find_answer(input_question, data)
-print("Answer:", answer)
+# azure imports-------------------------------------------------------------------
 
 
-##################################################################################################################
+endpoint = "https://greetingbotqna.cognitiveservices.azure.com/"
+credential = AzureKeyCredential("c48f1d66b43a4392886b600513ce3044")
+knowledge_base_project = "qna"
+deployment = "production"
 
 # ---------------------------------------------------------------------------------------------------------------
 # mongo db initialization
