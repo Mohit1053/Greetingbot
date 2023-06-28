@@ -47,14 +47,14 @@ from chatterbot.trainers import ListTrainer
 from chatterbot.trainers import ChatterBotCorpusTrainer
 
 import time
+from pymongo import MongoClient
+import pymongo
 time.clock = time.time # type: ignore
 def answer(question):
 
 
 # ---------------------------------------------------------------------------------------------------------------
 # mongo db initialization
-from pymongo import MongoClient
-import pymongo
 client = MongoClient(
    "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
 queryList = client['QueryLog']
