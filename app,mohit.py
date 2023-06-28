@@ -53,28 +53,28 @@ time.clock = time.time # type: ignore
 def answer(question):
 
 
-# ---------------------------------------------------------------------------------------------------------------
-# mongo db initialization
-client = MongoClient(
-   "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
-queryList = client['QueryLog']
-queriesCollection = queryList["queriesPostMount"]
-# query = {
-#            "Question": "start Test",
-#            "Answer": "working"
-#        }
-# queriesCollection.insert_one(query)
-# -----------------------------------------------------------------------------------------------------------------
-
-# from gpiozero import MotionSensor
-#  from picotts import PicoTTS
-# pir= MotionSensor(4)
-
-notUnderstood = "I am not sure if I understood that correctly"
-porcupine = pvporcupine.create(
-    access_key="zUOJpu87sR4uSIQj/fH9XFzHz1rla68/m642B3GygFDN36cB6fYvdA==",
-    keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn','/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Circuit_en_raspberry-pi_v2_1_0.ppn' ],
-    keywords=['bumblebee']
+   # ---------------------------------------------------------------------------------------------------------------
+   # mongo db initialization
+   client = MongoClient(
+      "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
+   queryList = client['QueryLog']
+   queriesCollection = queryList["queriesPostMount"]
+   # query = {
+   #            "Question": "start Test",
+   #            "Answer": "working"
+   #        }
+   # queriesCollection.insert_one(query)
+   # -----------------------------------------------------------------------------------------------------------------
+   
+   # from gpiozero import MotionSensor
+   #  from picotts import PicoTTS
+   # pir= MotionSensor(4)
+   
+   notUnderstood = "I am not sure if I understood that correctly"
+   porcupine = pvporcupine.create(
+       access_key="zUOJpu87sR4uSIQj/fH9XFzHz1rla68/m642B3GygFDN36cB6fYvdA==",
+       keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn','/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Circuit_en_raspberry-pi_v2_1_0.ppn' ],
+       keywords=['bumblebee']
 )
 
 
