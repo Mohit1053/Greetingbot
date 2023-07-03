@@ -30,11 +30,17 @@ import struct
 
 from six.moves import queue
 # azure imports-------------------------------------------------------------------
-from azure.core.credentials import AzureKeyCredential
+# from azure.core.credentials import AzureKeyCredential
 
-from pymongo.server_api import ServerApi
+def _get_server_api(server_api_version):
+    try:
+        server_api = ServerApi(server_api_version)
+    except ValueError:
+        raise ConnectionError(
+            "Unsupported server_api_version: {}".format(server_api_version))
+    return server_api
 
-from azure.ai.language.questionanswering import QuestionAnsweringClient
+# from azure.ai.language.questionanswering import QuestionAnsweringClient
 
 endpoint = "https://voicenlp.cognitiveservices.azure.com/"
 credential = AzureKeyCredential("d50a821ee99141a9a841efffeeae28dc")
@@ -47,34 +53,34 @@ from chatterbot.trainers import ListTrainer
 from chatterbot.trainers import ChatterBotCorpusTrainer
 
 import time
-from pymongo import MongoClient
-import pymongo
 time.clock = time.time # type: ignore
 def answer(question):
 
 
-   # ---------------------------------------------------------------------------------------------------------------
-   # mongo db initialization
-   client = MongoClient(
-      "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
-   queryList = client['QueryLog']
-   queriesCollection = queryList["queriesPostMount"]
-   # query = {
-   #            "Question": "start Test",
-   #            "Answer": "working"
-   #        }
-   # queriesCollection.insert_one(query)
-   # -----------------------------------------------------------------------------------------------------------------
-   
-   # from gpiozero import MotionSensor
-   #  from picotts import PicoTTS
-   # pir= MotionSensor(4)
-   
-   notUnderstood = "I am not sure if I understood that correctly"
-   porcupine = pvporcupine.create(
-       access_key="zUOJpu87sR4uSIQj/fH9XFzHz1rla68/m642B3GygFDN36cB6fYvdA==",
-       keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn','/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Circuit_en_raspberry-pi_v2_1_0.ppn' ],
-       keywords=['bumblebee']
+    # ---------------------------------------------------------------------------------------------------------------
+    # mongo db initialization
+    from pymongo import MongoClient
+    import pymongo
+    client = MongoClient(
+    "mongodb+srv://ecelab:GreetingBot101@cluster0.dcma0.mongodb.net/QueryLog?retryWrites=true&w=majority")
+    queryList = client['QueryLog']
+    queriesCollection = queryList["queriesPostMount"]
+    # query = {
+    #            "Question": "start Test",
+    #            "Answer": "working"
+    #        }
+    # queriesCollection.insert_one(query)
+    # -----------------------------------------------------------------------------------------------------------------
+
+# from gpiozero import MotionSensor
+#  from picotts import PicoTTS
+# pir= MotionSensor(4)
+
+notUnderstood = "I am not sure if I understood that correctly"
+porcupine = pvporcupine.create(
+    access_key="zUOJpu87sR4uSIQj/fH9XFzHz1rla68/m642B3GygFDN36cB6fYvdA==",
+    keyword_paths=['/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Diode_en_raspberry-pi_v2_1_0.ppn','/home/ecelab/Documents/greetingBotVoiceSystem/Mister-Circuit_en_raspberry-pi_v2_1_0.ppn' ],
+    keywords=['bumblebee']
 )
 
 
@@ -224,43 +230,43 @@ def generateResponse(userQuestion):
         englishText = translator.translate(userQuestion, source = 'hi', dest = 'en')
         userQuestion = englishText.text
     """Generates response from the given user question and outputs the speech converted"""
-    client = QuestionAnsweringClient(endpoint, credential)
-    with client:
-        question = userQuestion
-        chatbot = ChatBot('CyFuse')
+    # client = QuestionAnsweringClient(endpoint, credential)
+    # with client:
+    question = userQuestion
+    chatbot = ChatBot('CyFuse')
 
-        trainer = ChatterBotCorpusTrainer(chatbot)
+    trainer = ChatterBotCorpusTrainer(chatbot)
 
-        trainer.train("chatterbot.corpus.english")
+    trainer.train("chatterbot.corpus.english")
 
-        trainer.train("chatterbot.corpus.english.greetings")
+    trainer.train("chatterbot.corpus.english.greetings")
 
-        trainer.train("chatterbot.corpus.english.conversations")
+    trainer.train("chatterbot.corpus.english.conversations")
 
-        trainer.train("chatterbot.corpus.english.ai")
+    trainer.train("chatterbot.corpus.english.ai")
 
-        while True:
-            with open("Greeting Bot ECE labs - Sheet1.txt", "r") as f:
-                for line in f:
-                    trainer.train(line.split("!@#$%^&*()"))
+    while True:
+        with open("Greeting Bot ECE labs - Sheet1.txt", "r") as f:
+            for line in f:
+                trainer.train(line.split("!@#$%^&*()"))
 
-            question = input("What is your question? ")
-            output = str(chatbot.get_response(question))
-            print(output)
+        question = input("What is your question? ")
+        output = str(chatbot.get_response(question))
+        print(output)
 
-            ans = input("\nDid I answer correctly? : ")
-            if ans.capitalize() == "Yes":
-                trainer.train([question, output])
-                # store the question-answer pair in a file
-                with open("question-answer.txt", "a") as f:
-                    f.write(question + "!@#$%^&*()" + output + "\n")
-                
-            else:
-                print("\nSorry")
+        ans = input("\nDid I answer correctly? : ")
+        if ans.capitalize() == "Yes":
+            trainer.train([question, output])
+            # store the question-answer pair in a file
+            with open("question-answer.txt", "a") as f:
+                f.write(question + "!@#$%^&*()" + output + "\n")
+            
+        else:
+            print("\nSorry")
 
-            answer = input("\nCan I help you with anything else? : ")
-            if answer.lower() == "no":
-                break
+        answer = input("\nCan I help you with anything else? : ")
+        if answer.lower() == "no":
+            break
 
 
 
