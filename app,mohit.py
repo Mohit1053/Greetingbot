@@ -41,11 +41,26 @@ CHUNK = 80  # 100ms
 # azure imports-------------------------------------------------------------------
 
 
-endpoint = "https://greetingbotqna.cognitiveservices.azure.com/"
-credential = AzureKeyCredential("c48f1d66b43a4392886b600513ce3044")
-knowledge_base_project = "qna"
-deployment = "production"
+# endpoint = "https://greetingbotqna.cognitiveservices.azure.com/"
+# credential = AzureKeyCredential("c48f1d66b43a4392886b600513ce3044")
+# knowledge_base_project = "qna"
+# deployment = "production"
 ##############################################################################################################################
+
+# import os
+from chatterbot import ChatBot
+from chatterbot.trainers import ListTrainer
+
+chatbot = ChatBot("ECE Lab")
+trainer = ListTrainer(chatbot)
+
+f = open("Greeting Bot ECE labs - Sheet1.txt", "r")
+
+for line in f:
+    trainer.train(line.split("!@#$%^&*()"))
+
+############################################################
+
 import pandas as pd
 
 def count_matches(question, word_list):
@@ -235,27 +250,32 @@ def generateResponse(userQuestion):
         speakGoogleText(shortQuesList[userQuestion], speakHindi)
         return
     
-    client = QuestionAnsweringClient(endpoint, credential)
-    with client:
-        question = userQuestion
-        output = client.get_answers(
-            # confidence_threshold=0.4,
-            question=question,
-            project_name=knowledge_base_project,
-            deployment_name=deployment
-        )
-    print("Q: {}".format(question))
-    print("A: {}".format(output.answers[0].answer))
-    print("Confidence Score: {}".format(output.answers[0].confidence))
-    if (output.answers[0].confidence < 0.37):
-        query = {
-            "Question": question,
-            "Answer": output.answers[0].answer
-        }
-        queriesCollection.insert_one(query)
-        speakGoogleText(notUnderstood, speakHindi)
-    else:
-        speakGoogleText(output.answers[0].answer, speakHindi)
+    # client = QuestionAnsweringClient(endpoint, credential)
+    # with client:
+    #     question = userQuestion
+    #     output = client.get_answers(
+    #         # confidence_threshold=0.4,
+    #         question=question,
+    #         project_name=knowledge_base_project,
+    #         deployment_name=deployment
+    #     )
+
+    answer = str(chatbot.get_response(userQuestion))
+
+
+
+    print("Q: {}".format(userQuestion))
+    print("A: {}".format(answer))
+    # print("Confidence Score: {}".format(output.answers[0].confidence))
+    # if (output.answers[0].confidence < 0.37):
+    #     query = {
+    #         "Question": question,
+    #         "Answer": output.answers[0].answer
+    #     }
+    #     queriesCollection.insert_one(query)
+    #     speakGoogleText(notUnderstood, speakHindi)
+    # else:
+    speakGoogleText(answer, speakHindi)
 def return_transcribed_word(responses):
     global text
     if responses == None:
