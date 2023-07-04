@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Greeting Bot</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js"></script>
+<script>
+    
+// sending a connect request to the server.
+    socket = io();
+    socket.connect('http://127.0.0.1:5000/');
+    socket.on('connect', function(){
+        socket.send('a');
+        console.log('Connection Estabilished from screen');
+    })
+    socket.on('message', function(msg){
+        if(msg == 'start') socket.send('start');
+    })
+    socket.on('command', function(msg){
+       console.log(msg);
+       if(msg=='c') document.getElementById("text").innerHTML = 
+       `
+       Instructions to use:
+              1) Please say “Mr. Diode”.
+              2)LED will glow in red color.
+              3)Please ask your question related to ECE Labs.
+              4)Once the question is answered the LED will turn off. 
+              5)Repeat from step 1 for subsequent query. 
+       
+       Designed By: Yash Agrawal (Class of 2024)
+       Mentored By: Mr. Abhishek Kumar, Dr. Rahul Gupta
+       Supported By: Dr. Vivek A. Bohara (Head, Dept. of ECE, IIIT-Delhi)
+       
+       `;
+       else document.getElementById("text").innerHTML = msg;
+    })
+
+    socket.on('counterUpdate', function(msg){
+        document.getElementById("counterText").innerHTML = `Number of questions asked : ${msg}`;
+    })
+
+</script>
+</head>
+</head>
+
+<style>
+    .body{
+        overflow: hidden;
+    }
+    .bottom{
+        
+        padding: 0px;
+        top: 87vh;
+        position: absolute;
+        direction: row;
+        display: flex;
+        justify-content: space-between;
+        width: 98%;
+    }
+</style>
+
+<body>
+    <div>
+        <img id ="showImage" src='../static/bot_face.png' alt="Image" class="visualImage" 
+        style = "position: relative;
+                    height: 25vh;
+                    width: 25vh;
+                    left: 40vw;
+                    top: 10px;"/>
+        <h1 
+        id='text' style= "text-align: left; padding:0px;font-family: 'Roboto Mono';
+        font-style: normal;
+        font-weight: 350;
+        font-size: 4.5vh;
+        line-height: 45px;
+        color: #00204A;">
+            <p style= "text-align: center; "> Hi! You can ask me any question related to ECE Labs <br> Try Saying <i>"Mr. Diode, Who are you"</i> </p> <br><br>
+                <b>Instructions to use:</b><br>
+                    &emsp;&emsp;1) Please say “Mr. Diode (Mr. Circuit to talk in Hindi)”.<br>
+                    &emsp;&emsp;2)LED will glow in red color.<br>
+                    &emsp;&emsp;3)Please ask your question related to ECE Labs.<br>
+                    &emsp;&emsp;4)Once the question is answered the LED will turn off. <br>
+                    &emsp;&emsp;5)Repeat from step 1 for subsequent query. <br>
+                    <br>
+
+        </h1>
+
+    </div>
+
+    <div class="bottom">
+        <div class="credits">
+            <p style= "font-size: 25px; line-height: 30px;">Designed By: Yash Agrawal (Class of 2024)<br>
+                Mentored By: Mr. Abhishek Kumar, Dr. Rahul Gupta<br>
+                Supported By: Dr. Vivek A. Bohara (Head, Dept. of ECE, IIIT-Delhi)<br></p>
+        </div>
+        <div class="counter">
+            <p id="counterText" style= "font-size: 25px; line-height: 30px;">
+                Number of Questions Asked: 
+            </p>
+        </div>
+    </div>
+
+</body>
+</html>
