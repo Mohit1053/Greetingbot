@@ -61,7 +61,7 @@ for line in f:
 
 ############################################################
 
-import pandas as pd
+# import pandas as pd
 
 def count_matches(question, word_list):
     """
@@ -73,7 +73,7 @@ def count_matches(question, word_list):
             count += 1
     return count
 
-def find_answer(question, data):
+def find_answer(question):
     """
     Matches the given question with the maximum number of matching words in the data and returns the corresponding answer.
     """
@@ -91,12 +91,12 @@ def find_answer(question, data):
     return answer
 
 # Load the data from a CSV file
-data = pd.read_csv('data.csv')  # Replace 'data.csv' with your data file path
+# data = pd.read_csv('data.csv')  # Replace 'data.csv' with your data file path
 
 # Example usage
-input_question = input("What's your question")
-answer = find_answer(input_question, data)
-print("Answer:", answer)
+# input_question = input("What's your question")
+# answer = find_answer(input_question, data)
+# print("Answer:", answer)
 
 
 ##################################################################################################################
